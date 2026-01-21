@@ -8,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { Wallet, Mail, Phone, Apple } from "lucide-react";
+import { Wallet, Mail, Github } from "lucide-react";
 import {
   signInWithGoogle,
+  signInWithGithub,
+  signInWithFacebook,
   loginWithEmail,
   registerWithEmail
 } from "@/lib/supabase";
@@ -18,6 +20,8 @@ import {
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGithubLoading, setIsGithubLoading] = useState(false);
+  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -36,7 +40,6 @@ export default function Auth() {
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
-      // Supabase OAuth redirects, so success toast happens after redirect
     } catch (error) {
       console.error("Google sign-in error:", error);
       if (error.message?.includes("popup")) {
@@ -45,6 +48,36 @@ export default function Auth() {
         toast.error(error.message || "Google sign-in failed");
       }
       setIsGoogleLoading(false);
+    }
+  };
+
+  const handleGithubSignIn = async () => {
+    setIsGithubLoading(true);
+    try {
+      await signInWithGithub();
+    } catch (error) {
+      console.error("GitHub sign-in error:", error);
+      if (error.message?.includes("popup")) {
+        toast.info("Sign-in cancelled");
+      } else {
+        toast.error(error.message || "GitHub sign-in failed");
+      }
+      setIsGithubLoading(false);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    setIsFacebookLoading(true);
+    try {
+      await signInWithFacebook();
+    } catch (error) {
+      console.error("Facebook sign-in error:", error);
+      if (error.message?.includes("popup")) {
+        toast.info("Sign-in cancelled");
+      } else {
+        toast.error(error.message || "Facebook sign-in failed");
+      }
+      setIsFacebookLoading(false);
     }
   };
 
@@ -150,24 +183,26 @@ export default function Auth() {
 
             <Button
               variant="outline"
-              className="w-full h-12 text-base font-medium opacity-50"
-              disabled
-              title="Coming Soon"
+              className="w-full h-12 text-base font-medium"
+              onClick={handleGithubSignIn}
+              disabled={isGithubLoading}
+              data-testid="github-signin"
             >
-              <Apple className="w-5 h-5 mr-3" />
-              Continue with Apple
-              <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded">Soon</span>
+              <Github className="w-5 h-5 mr-3" />
+              {isGithubLoading ? "Signing in..." : "Continue with GitHub"}
             </Button>
 
             <Button
               variant="outline"
-              className="w-full h-12 text-base font-medium opacity-50"
-              disabled
-              title="Coming Soon"
+              className="w-full h-12 text-base font-medium"
+              onClick={handleFacebookSignIn}
+              disabled={isFacebookLoading}
+              data-testid="facebook-signin"
             >
-              <Phone className="w-5 h-5 mr-3" />
-              Continue with Phone
-              <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded">Soon</span>
+              <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+              {isFacebookLoading ? "Signing in..." : "Continue with Facebook"}
             </Button>
 
             <div className="relative py-2">

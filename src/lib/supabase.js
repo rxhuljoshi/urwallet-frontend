@@ -21,6 +21,30 @@ export const signInWithGoogle = async () => {
     return data;
 };
 
+// GitHub OAuth sign-in
+export const signInWithGithub = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+            redirectTo: window.location.origin,
+        },
+    });
+    if (error) throw error;
+    return data;
+};
+
+// Facebook OAuth sign-in
+export const signInWithFacebook = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+        options: {
+            redirectTo: window.location.origin,
+        },
+    });
+    if (error) throw error;
+    return data;
+};
+
 // Email/password login
 export const loginWithEmail = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
