@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { onAuthChange, getIdToken, logoutUser } from "@/lib/firebase";
+import { onAuthChange, getAccessToken, logoutUser } from "@/lib/supabase";
 
 const AuthContext = createContext();
 
@@ -11,12 +11,12 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [session, setSession] = useState(null);
 
-  const fetchUser = useCallback(async (idToken) => {
+  const fetchUser = useCallback(async (accessToken) => {
     try {
       const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${idToken}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       setUser(response.data);
       return response.data;
@@ -27,14 +27,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthChange(async (fbUser) => {
-      setFirebaseUser(fbUser);
+    const unsubscribe = onAuthChange(async (supabaseUser, supabaseSession) => {
+      setSession(supabaseSession);
 
-      if (fbUser) {
+      if (supabaseSession) {
         try {
-          const idToken = await fbUser.getIdToken();
-          setToken(idToken);
-          await fetchUser(idToken);
+          const accessToken = supabaseSession.access_token;
+          setToken(accessToken);
+          await fetchUser(accessToken);
         } catch (error) {
           console.error("Error getting token:", error);
           setToken(null);
@@ -51,29 +51,33 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, [fetchUser]);
 
-  // tokens expire after 1 hour, refresh every 50 min
+  // Supabase handles token refresh automatically
+  // but we can manually refresh if needed
   useEffect(() => {
-    if (!firebaseUser) return;
+    if (!session) return;
 
     const refreshToken = async () => {
       try {
-        const newToken = await firebaseUser.getIdToken(true);
-        setToken(newToken);
+        const newToken = await getAccessToken();
+        if (newToken) {
+          setToken(newToken);
+        }
       } catch (error) {
         console.error("Token refresh failed:", error);
       }
     };
 
+    // Refresh every 50 minutes (tokens expire after 1 hour)
     const interval = setInterval(refreshToken, 50 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [firebaseUser]);
+  }, [session]);
 
   const logout = useCallback(async () => {
     try {
       await logoutUser();
       setToken(null);
       setUser(null);
-      setFirebaseUser(null);
+      setSession(null);
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -98,7 +102,7 @@ export function AuthProvider({ children }) {
         logout,
         updateUser,
         refreshUser,
-        firebaseUser
+        session
       }}
     >
       {children}

@@ -8,7 +8,7 @@ A modern React dashboard for personal expense tracking with AI-powered insights.
 |-----------|------------|
 | Framework | **React 19** with Create React App |
 | Styling | **TailwindCSS** + **shadcn/ui** components |
-| Auth | **Firebase Authentication** |
+| Auth | **Supabase Authentication** |
 | Charts | **Recharts** |
 | Build | **CRACO** (Create React App Config Override) |
 | Container | **Docker** + **Nginx** |
@@ -19,7 +19,7 @@ A modern React dashboard for personal expense tracking with AI-powered insights.
 - 💰 **Add Expense** - Quick transaction entry with AI categorization
 - 🤖 **AI Insights** - Monthly spending analysis and recommendations
 - ⚠️ **Spike Detection** - Alerts when spending increases significantly
-- 🔐 **Firebase Auth** - Google Sign-In and Email/Password
+- 🔐 **Supabase Auth** - Google Sign-In and Email/Password
 - 🌙 **Dark/Light Mode** - Theme customization
 - 💵 **Multi-Currency** - USD, EUR, GBP, INR, and more
 
@@ -39,7 +39,7 @@ frontend/
 │   ├── context/               # React context (Auth)
 │   ├── hooks/                 # Custom React hooks
 │   └── lib/
-│       ├── firebase.js        # Firebase configuration
+│       ├── supabase.js        # Supabase configuration
 │       └── utils.js           # Helper functions
 ├── public/
 ├── Dockerfile
@@ -54,7 +54,7 @@ frontend/
 
 - **Node.js 18+** (or Yarn)
 - **Backend API** running at `http://localhost:8000`
-- **Firebase project** with Authentication enabled
+- **Supabase project** with Authentication enabled
 
 ### 1. Setup Environment
 
@@ -64,7 +64,7 @@ cd frontend
 # Copy environment template
 cp .env.example .env
 
-# Edit .env with your Firebase config
+# Edit .env with your Supabase config
 ```
 
 ### 2. Install Dependencies
@@ -111,19 +111,15 @@ docker-compose up --build -d
 | Variable | Description |
 |----------|-------------|
 | `REACT_APP_BACKEND_URL` | Backend API URL |
-| `REACT_APP_FIREBASE_API_KEY` | Firebase API key |
-| `REACT_APP_FIREBASE_AUTH_DOMAIN` | Firebase auth domain |
-| `REACT_APP_FIREBASE_PROJECT_ID` | Firebase project ID |
-| `REACT_APP_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket |
-| `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID |
-| `REACT_APP_FIREBASE_APP_ID` | Firebase app ID |
+| `REACT_APP_SUPABASE_URL` | Supabase project URL |
+| `REACT_APP_SUPABASE_ANON_KEY` | Supabase anonymous key |
 
 ## Authentication Flow
 
-1. User signs in via Firebase (Google or Email/Password)
-2. Firebase returns an ID token
+1. User signs in via Supabase (Google or Email/Password)
+2. Supabase returns an access token
 3. Frontend includes token in `Authorization: Bearer <token>` header
-4. Backend verifies token and returns user data
+4. Backend verifies JWT and returns user data
 
 ## Available Scripts
 
