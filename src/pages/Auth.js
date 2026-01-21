@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { Wallet, Mail, Github } from "lucide-react";
+import { Wallet, Mail, Github, ArrowLeft } from "lucide-react";
 import {
   signInWithGoogle,
   signInWithGithub,
@@ -25,6 +25,7 @@ export default function Auth() {
 
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({ email: "", password: "", confirmPassword: "" });
+  const [registerStep, setRegisterStep] = useState(1);
 
   if (user) {
     if (!user.is_currency_set) {
@@ -176,48 +177,81 @@ export default function Auth() {
               </TabsContent>
 
               <TabsContent value="register" className="mt-4">
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
-                    <Input
-                      id="register-email"
-                      data-testid="register-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={registerData.email}
-                      onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                      required
-                    />
+                {registerStep === 1 ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="register-email">Email</Label>
+                      <Input
+                        id="register-email"
+                        data-testid="register-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={registerData.email}
+                        onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={() => {
+                        if (!registerData.email) {
+                          toast.error("Please enter your email");
+                          return;
+                        }
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerData.email)) {
+                          toast.error("Please enter a valid email");
+                          return;
+                        }
+                        setRegisterStep(2);
+                      }}
+                      data-testid="register-next"
+                    >
+                      Next
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
-                    <Input
-                      id="register-password"
-                      data-testid="register-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={registerData.password}
-                      onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-confirm">Confirm Password</Label>
-                    <Input
-                      id="register-confirm"
-                      data-testid="register-confirm"
-                      type="password"
-                      placeholder="••••••••"
-                      value={registerData.confirmPassword}
-                      onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading} data-testid="register-submit">
-                    <Mail className="w-4 h-4 mr-2" />
-                    {isLoading ? "Creating..." : "Create Account"}
-                  </Button>
-                </form>
+                ) : (
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2 mb-2"
+                      onClick={() => setRegisterStep(1)}
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" />
+                      Back
+                    </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-password">Password</Label>
+                      <Input
+                        id="register-password"
+                        data-testid="register-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={registerData.password}
+                        onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-confirm">Confirm Password</Label>
+                      <Input
+                        id="register-confirm"
+                        data-testid="register-confirm"
+                        type="password"
+                        placeholder="••••••••"
+                        value={registerData.confirmPassword}
+                        onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading} data-testid="register-submit">
+                      <Mail className="w-4 h-4 mr-2" />
+                      {isLoading ? "Creating..." : "Sign Up"}
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
             </Tabs>
 
