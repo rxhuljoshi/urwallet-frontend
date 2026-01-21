@@ -33,18 +33,6 @@ export const signInWithGithub = async () => {
     return data;
 };
 
-// Facebook OAuth sign-in
-export const signInWithFacebook = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: {
-            redirectTo: window.location.origin,
-        },
-    });
-    if (error) throw error;
-    return data;
-};
-
 // Email/password login
 export const loginWithEmail = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
