@@ -258,7 +258,7 @@ export default function Auth() {
             <div className="relative py-2">
               <Separator />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-sm text-muted-foreground">
-                or continue with
+                or
               </span>
             </div>
 
