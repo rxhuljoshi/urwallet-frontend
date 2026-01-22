@@ -69,7 +69,7 @@ export default function AddExpense() {
     } catch (error) {
       toast.error("Failed to load transaction");
     }
-  }, [id, token]);
+  }, [id, token, user?.currency]);
 
   useEffect(() => {
     if (isEdit) {
