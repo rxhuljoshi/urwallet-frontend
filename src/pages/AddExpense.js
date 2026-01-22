@@ -25,15 +25,28 @@ const categories = [
   "Other",
 ];
 
+const currencies = [
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "EUR", symbol: "€", name: "Euro" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+  { code: "INR", symbol: "₹", name: "Indian Rupee" },
+  { code: "JPY", symbol: "¥", name: "Japanese Yen" },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar" },
+  { code: "CAD", symbol: "C$", name: "Canadian Dollar" },
+  { code: "CHF", symbol: "CHF", name: "Swiss Franc" },
+  { code: "CNY", symbol: "¥", name: "Chinese Yuan" },
+];
+
 export default function AddExpense() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: "",
     category: "",
+    currency: user?.currency || "USD",
     remarks: "",
     date: new Date().toISOString().split('T')[0],
   });
@@ -48,6 +61,7 @@ export default function AddExpense() {
         setFormData({
           amount: transaction.amount.toString(),
           category: transaction.category,
+          currency: transaction.currency || user?.currency || "USD",
           remarks: transaction.remarks || "",
           date: transaction.date,
         });
@@ -71,6 +85,7 @@ export default function AddExpense() {
       const payload = {
         amount: parseFloat(formData.amount),
         category: formData.category,
+        currency: formData.currency,
         remarks: formData.remarks,
         date: formData.date,
       };
@@ -125,6 +140,25 @@ export default function AddExpense() {
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency</Label>
+                <Select
+                  value={formData.currency}
+                  onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                >
+                  <SelectTrigger id="currency" data-testid="currency-select">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((cur) => (
+                      <SelectItem key={cur.code} value={cur.code}>
+                        {cur.symbol} - {cur.name} ({cur.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

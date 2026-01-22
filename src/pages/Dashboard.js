@@ -313,7 +313,10 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-lg font-semibold">
-                        {currencySymbol}{txn.amount.toFixed(2)}
+                        {currencySymbols[txn.currency] || currencySymbol}{txn.amount.toFixed(2)}
+                        {txn.currency && txn.currency !== user?.currency && (
+                          <span className="ml-1 text-xs text-muted-foreground">({txn.currency})</span>
+                        )}
                       </span>
                       <div className="flex gap-1">
                         <Button

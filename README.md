@@ -21,7 +21,7 @@ A modern React dashboard for personal expense tracking with AI-powered insights.
 - ⚠️ **Spike Detection** - Alerts when spending increases significantly
 - 🔐 **Supabase Auth** - Google Sign-In and Email/Password
 - 🌙 **Dark/Light Mode** - Theme customization
-- 💵 **Multi-Currency** - USD, EUR, GBP, INR, and more
+- 💵 **Multi-Currency** - Select currency per transaction (USD, EUR, GBP, INR, JPY, AUD, CAD, CHF, CNY)
 
 ## Project Structure
 
