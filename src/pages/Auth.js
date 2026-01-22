@@ -133,7 +133,7 @@ export default function Auth() {
             <Wallet className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-4xl font-bold mb-2">urWallet</h1>
-          <p className="text-muted-foreground">AI-powered financial insights</p>
+          <p className="text-muted-foreground">Track your expenses the right way.</p>
         </div>
 
         <Card>
@@ -153,7 +153,7 @@ export default function Auth() {
                         id="login-email"
                         data-testid="login-email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="Enter your e-mail here"
                         value={loginData.email}
                         onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                         required
