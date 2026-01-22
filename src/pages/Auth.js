@@ -25,6 +25,7 @@ export default function Auth() {
 
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({ email: "", password: "", confirmPassword: "" });
+  const [loginStep, setLoginStep] = useState(1);
   const [registerStep, setRegisterStep] = useState(1);
 
   if (user) {
@@ -144,36 +145,69 @@ export default function Auth() {
               </TabsList>
 
               <TabsContent value="login" className="mt-4">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      data-testid="login-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={loginData.email}
-                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                      required
-                    />
+                {loginStep === 1 ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <Input
+                        id="login-email"
+                        data-testid="login-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={() => {
+                        if (!loginData.email) {
+                          toast.error("Please enter your email");
+                          return;
+                        }
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginData.email)) {
+                          toast.error("Please enter a valid email");
+                          return;
+                        }
+                        setLoginStep(2);
+                      }}
+                      data-testid="login-next"
+                    >
+                      Next
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <Input
-                      id="login-password"
-                      data-testid="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={loginData.password}
-                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading} data-testid="login-submit">
-                    <Mail className="w-4 h-4 mr-2" />
-                    {isLoading ? "Logging in..." : "Login with Email"}
-                  </Button>
-                </form>
+                ) : (
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2 mb-2"
+                      onClick={() => setLoginStep(1)}
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" />
+                      Back
+                    </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Password</Label>
+                      <Input
+                        id="login-password"
+                        data-testid="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading} data-testid="login-submit">
+                      <Mail className="w-4 h-4 mr-2" />
+                      {isLoading ? "Logging in..." : "Login"}
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
 
               <TabsContent value="register" className="mt-4">
