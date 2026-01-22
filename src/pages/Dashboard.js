@@ -93,9 +93,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="urWallet" className="w-8 h-8" />
             <h1 className="text-2xl font-bold">urWallet</h1>
-            {/* <p className="text-sm text-muted-foreground">{user?.email}</p> */}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate("/settings")} data-testid="settings-button">
@@ -344,6 +344,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </div >
   );
 }

@@ -129,8 +129,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Wallet className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/logo.png" alt="urWallet" className="w-16 h-16" />
           </div>
           <h1 className="text-4xl font-bold mb-2">urWallet</h1>
           <p className="text-muted-foreground">Track your expenses the right way.</p>
