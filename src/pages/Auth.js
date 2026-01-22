@@ -219,7 +219,7 @@ export default function Auth() {
                         id="register-email"
                         data-testid="register-email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="Enter your e-mail here"
                         value={registerData.email}
                         onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                         required
