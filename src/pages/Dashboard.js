@@ -1,13 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { Settings, PlusCircle, TrendingUp, Wallet, PiggyBank, AlertCircle, Sparkles } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { TrendingUp, Wallet, PiggyBank, AlertCircle, Sparkles, DollarSign } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { toast } from "sonner";
+import { DashboardSkeleton } from "@/components/Skeleton";
+import ProfileMenu from "@/components/ProfileMenu";
+import AddTransactionButton from "@/components/FloatingActionButton";
+import TransactionMenu from "@/components/TransactionMenu";
+import SortFilterControls from "@/components/SortFilterControls";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -19,22 +25,35 @@ const currencySymbols = {
   AUD: "A$", CAD: "C$", CHF: "CHF", CNY: "¥"
 };
 
+const months = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1),
+  label: new Date(2000, i).toLocaleString('default', { month: 'long' })
+}));
+
 export default function Dashboard() {
-  const { token, user, logout } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [spike, setSpike] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [sort, setSort] = useState("latest");
+  const [typeFilter, setTypeFilter] = useState("all");
   const currencySymbol = currencySymbols[user?.currency] || "$";
 
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
+
+  const years = Array.from({ length: 5 }, (_, i) => ({
+    value: String(now.getFullYear() - i),
+    label: String(now.getFullYear() - i)
+  }));
 
   const fetchDashboardData = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/dashboard/summary`, {
-        params: { month: selectedMonth, year: selectedYear },
+        params: { month: Number(selectedMonth), year: Number(selectedYear) },
         headers: { Authorization: `Bearer ${token}` },
       });
       setSummary(response.data);
@@ -62,6 +81,7 @@ export default function Dashboard() {
   }, [fetchDashboardData, fetchSpikeDetection]);
 
   const handleDeleteTransaction = async (id) => {
+    setDeletingId(id);
     try {
       await axios.delete(`${API}/transactions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -70,15 +90,13 @@ export default function Dashboard() {
       fetchDashboardData();
     } catch (error) {
       toast.error("Failed to delete transaction");
+    } finally {
+      setDeletingId(null);
     }
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const chartData = Object.entries(summary?.category_breakdown || {}).map(([name, value]) => ({
@@ -89,118 +107,158 @@ export default function Dashboard() {
   const budgetUsed = summary?.budget ? (summary.expenses / summary.budget) * 100 : 0;
   const budgetExceeded = budgetUsed > 100;
 
+  // Sort and filter transactions
+  let displayTransactions = [...(summary?.transactions || [])];
+
+  // Apply type filter
+  if (typeFilter !== "all") {
+    displayTransactions = displayTransactions.filter(t => t.type === typeFilter);
+  }
+
+  // Apply sorting (transactions come pre-sorted from API but we can re-sort client-side)
+  if (sort === "oldest") {
+    displayTransactions.sort((a, b) => a.date.localeCompare(b.date));
+  } else if (sort === "amount_asc") {
+    displayTransactions.sort((a, b) => a.amount - b.amount);
+  } else if (sort === "amount_desc") {
+    displayTransactions.sort((a, b) => b.amount - a.amount);
+  }
+  // "latest" is default from API
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+    <div className="min-h-screen bg-background animate-fade-in pb-24">
+      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="urWallet" className="w-8 h-8" />
-            <h1 className="text-2xl font-bold">urWallet</h1>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <img src="/logo.png" alt="urWallet" className="w-6 h-6" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">urWallet</h1>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/settings")} data-testid="settings-button">
-              <Settings className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" onClick={logout} data-testid="logout-button">
-              Logout
-            </Button>
-          </div>
+          <ProfileMenu />
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex gap-2">
-            <select
-              className="px-3 py-2 rounded-lg border bg-card text-foreground"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              data-testid="month-select"
-            >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(2000, i).toLocaleString('default', { month: 'long' })}
-                </option>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[140px]" data-testid="month-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((month) => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
               ))}
-            </select>
-            <select
-              className="px-3 py-2 rounded-lg border bg-card text-foreground"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              data-testid="year-select"
-            >
-              {Array.from({ length: 5 }, (_, i) => (
-                <option key={i} value={now.getFullYear() - i}>
-                  {now.getFullYear() - i}
-                </option>
+            </SelectContent>
+          </Select>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[100px]" data-testid="year-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((year) => (
+                <SelectItem key={year.value} value={year.value}>
+                  {year.label}
+                </SelectItem>
               ))}
-            </select>
-          </div>
+            </SelectContent>
+          </Select>
         </div>
 
         {spike && (
-          <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950/20" data-testid="spike-alert">
-            <CardHeader className="flex flex-row items-center gap-2 pb-2">
-              <AlertCircle className="w-5 h-5 text-orange-600" />
-              <CardTitle className="text-lg text-orange-600">Spending Spike Detected</CardTitle>
+          <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20 animate-slide-up" data-testid="spike-alert">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <CardTitle className="text-lg text-amber-700 dark:text-amber-300">Spending Spike Detected</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-orange-800 dark:text-orange-200">{spike}</p>
+              <p className="text-sm text-amber-800 dark:text-amber-200 ml-[52px]">{spike}</p>
             </CardContent>
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card data-testid="expenses-card">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card className="card-hover animate-slide-up stagger-1" data-testid="income-card">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
-                <Wallet className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-emerald-500" />
+                </div>
+                Income
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                {currencySymbol}{summary?.income?.toFixed(2) || '0.00'}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="card-hover animate-slide-up stagger-2" data-testid="expenses-card">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                  <Wallet className="w-4 h-4 text-rose-500" />
+                </div>
                 Expenses
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
+              <div className="text-3xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
                 {currencySymbol}{summary?.expenses?.toFixed(2) || '0.00'}
               </div>
             </CardContent>
           </Card>
 
-          <Card data-testid="savings-card">
+          <Card className="card-hover animate-slide-up stagger-3" data-testid="savings-card">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
-                <PiggyBank className="w-4 h-4" />
-                Savings
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <PiggyBank className="w-4 h-4 text-blue-500" />
+                </div>
+                Savings Balance
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">
-                {currencySymbol}{summary?.savings?.toFixed(2) || '0.00'}
+              <div className="text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">
+                {currencySymbol}{summary?.savings_balance?.toFixed(2) || '0.00'}
               </div>
             </CardContent>
           </Card>
 
-          <Card data-testid="investments-card">
+          <Card className="card-hover animate-slide-up stagger-4" data-testid="investments-card">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-purple-500" />
+                </div>
                 Investments
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600">
+              <div className="text-3xl font-bold tracking-tight text-purple-600 dark:text-purple-400">
                 {currencySymbol}{summary?.investments?.toFixed(2) || '0.00'}
               </div>
             </CardContent>
           </Card>
 
-          <Card className={budgetExceeded ? "border-red-500" : ""} data-testid="budget-card">
+          <Card className={`card-hover animate-slide-up ${budgetExceeded ? "border-destructive/50" : ""}`} data-testid="budget-card">
             <CardHeader className="pb-2">
-              <CardDescription>Budget Status</CardDescription>
+              <CardDescription className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${budgetExceeded ? 'bg-destructive/10' : 'bg-muted'}`}>
+                  <Wallet className={`w-4 h-4 ${budgetExceeded ? 'text-destructive' : 'text-muted-foreground'}`} />
+                </div>
+                Budget Status
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {summary?.budget ? (
                 <div>
-                  <div className="text-2xl font-bold">{budgetUsed.toFixed(0)}%</div>
+                  <div className="text-3xl font-bold tracking-tight">{budgetUsed.toFixed(0)}%</div>
                   <div className="text-sm text-muted-foreground mt-1">
                     {currencySymbol}{summary.expenses.toFixed(2)} / {currencySymbol}{summary.budget.toFixed(2)}
                   </div>
@@ -217,9 +275,9 @@ export default function Dashboard() {
 
         {chartData.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className="animate-slide-up">
               <CardHeader>
-                <CardTitle>Category Breakdown</CardTitle>
+                <CardTitle className="text-lg">Category Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -244,9 +302,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-slide-up">
               <CardHeader>
-                <CardTitle>Spending by Category</CardTitle>
+                <CardTitle className="text-lg">Spending by Category</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -255,7 +313,7 @@ export default function Dashboard() {
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip formatter={(value) => `${currencySymbol}${value.toFixed(2)}`} />
-                    <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -266,7 +324,7 @@ export default function Dashboard() {
         {user?.ai_insights_enabled && (
           <Button
             onClick={() => navigate("/ai-insights")}
-            className="w-full md:w-auto"
+            className="w-full md:w-auto btn-press"
             size="lg"
             data-testid="view-insights-button"
           >
@@ -275,67 +333,59 @@ export default function Dashboard() {
           </Button>
         )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="animate-slide-up">
+          <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
             <div>
-              <CardTitle>Recent Transactions</CardTitle>
+              <CardTitle className="text-lg">Transactions</CardTitle>
               <CardDescription>This month's activity</CardDescription>
             </div>
-            <Button onClick={() => navigate("/add-expense")} data-testid="add-expense-button">
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Add Expense
-            </Button>
+            <div className="flex items-center gap-2">
+              <SortFilterControls
+                sort={sort}
+                onSortChange={setSort}
+                typeFilter={typeFilter}
+                onTypeFilterChange={setTypeFilter}
+              />
+              <AddTransactionButton />
+            </div>
           </CardHeader>
           <CardContent>
-            {summary?.transactions?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No transactions yet this month</p>
-                <Button onClick={() => navigate("/add-expense")} className="mt-4" variant="outline">
-                  Add your first expense
-                </Button>
+            {displayTransactions.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <Wallet className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground mb-2">No transactions yet</p>
+                <p className="text-sm text-muted-foreground">Click the + button to add your first transaction</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {summary?.transactions?.slice(0, 10).map((txn) => (
+                {displayTransactions.slice(0, 15).map((txn) => (
                   <div
                     key={txn.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all duration-200"
                     data-testid="transaction-item"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{txn.category}</Badge>
-                        <span className="text-sm text-muted-foreground">{txn.date}</span>
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {txn.remarks || txn.category}
+                      </p>
                       {txn.remarks && (
-                        <p className="text-sm text-muted-foreground mt-1">{txn.remarks}</p>
+                        <p className="text-sm text-muted-foreground">{txn.category}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-lg font-semibold">
-                        {currencySymbols[txn.currency] || currencySymbol}{txn.amount.toFixed(2)}
-                        {txn.currency && txn.currency !== user?.currency && (
-                          <span className="ml-1 text-xs text-muted-foreground">({txn.currency})</span>
-                        )}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/edit-expense/${txn.id}`)}
-                          data-testid="edit-transaction-button"
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteTransaction(txn.id)}
-                          data-testid="delete-transaction-button"
-                        >
-                          Delete
-                        </Button>
+                    <div className="flex items-center gap-4 ml-4">
+                      <div className="text-right">
+                        <p className={`font-semibold tabular-nums ${txn.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                          {txn.type === 'income' ? '+' : '-'}{currencySymbols[txn.currency] || currencySymbol}{txn.amount.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{txn.date}</p>
                       </div>
+                      <TransactionMenu
+                        onEdit={() => navigate(`/add-transaction?edit=${txn.id}`)}
+                        onDelete={() => handleDeleteTransaction(txn.id)}
+                        isDeleting={deletingId === txn.id}
+                      />
                     </div>
                   </div>
                 ))}
@@ -344,6 +394,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    </div >
+    </div>
   );
 }

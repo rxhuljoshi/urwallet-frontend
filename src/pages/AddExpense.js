@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2, Receipt } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -111,20 +111,30 @@ export default function AddExpense() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+    <div className="min-h-screen bg-background animate-fade-in">
+      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")} data-testid="back-button">
+          <Button variant="ghost" onClick={() => navigate("/dashboard")} data-testid="back-button" className="btn-press">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <Card>
+      <div className="max-w-3xl mx-auto px-4 py-8 animate-slide-up">
+        <Card className="border-border/50 shadow-lg shadow-primary/5">
           <CardHeader>
-            <CardTitle>{isEdit ? "Edit Expense" : "Add New Expense"}</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Receipt className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>{isEdit ? "Edit Expense" : "Add New Expense"}</CardTitle>
+                <CardDescription>
+                  {isEdit ? "Update the details of your expense" : "Record a new expense transaction"}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -139,6 +149,7 @@ export default function AddExpense() {
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   required
+                  className="h-11 text-lg font-medium"
                 />
               </div>
 
@@ -148,7 +159,7 @@ export default function AddExpense() {
                   value={formData.currency}
                   onValueChange={(value) => setFormData({ ...formData, currency: value })}
                 >
-                  <SelectTrigger id="currency" data-testid="currency-select">
+                  <SelectTrigger id="currency" data-testid="currency-select" className="h-11">
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
@@ -167,7 +178,7 @@ export default function AddExpense() {
                   value={formData.category}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
                 >
-                  <SelectTrigger id="category" data-testid="category-select">
+                  <SelectTrigger id="category" data-testid="category-select" className="h-11">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -189,6 +200,7 @@ export default function AddExpense() {
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
+                  className="h-11"
                 />
               </div>
 
@@ -201,17 +213,31 @@ export default function AddExpense() {
                   value={formData.remarks}
                   onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                   rows={3}
+                  className="resize-none"
                 />
               </div>
 
-              <div className="flex gap-3">
-                <Button type="submit" disabled={isLoading} data-testid="submit-expense-button">
-                  {isLoading ? "Saving..." : isEdit ? "Update Expense" : "Add Expense"}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  data-testid="submit-expense-button"
+                  className="btn-press h-11 px-6"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    isEdit ? "Update Expense" : "Add Expense"
+                  )}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => navigate("/dashboard")}
+                  className="btn-press h-11"
                 >
                   Cancel
                 </Button>

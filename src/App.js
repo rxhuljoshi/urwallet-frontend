@@ -6,20 +6,31 @@ import { Toaster } from "@/components/ui/sonner";
 import Auth from "./pages/Auth";
 import CurrencySelector from "./pages/CurrencySelector";
 import Dashboard from "./pages/Dashboard";
-import AddExpense from "./pages/AddExpense";
+import AddTransaction from "./pages/AddTransaction";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import AIInsights from "./pages/AIInsights";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { Loader2 } from "lucide-react";
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        </div>
+        <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { token, user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-xl">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!token) {
@@ -37,11 +48,7 @@ function CurrencyRoute({ children }) {
   const { token, user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-xl">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!token) {
@@ -81,18 +88,27 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/add-expense"
+        path="/add-transaction"
         element={
           <ProtectedRoute>
-            <AddExpense />
+            <AddTransaction />
           </ProtectedRoute>
         }
       />
+      {/* Legacy routes - redirect to new add-transaction */}
+      <Route
+        path="/add-expense"
+        element={<Navigate to="/add-transaction?type=expense" replace />}
+      />
       <Route
         path="/edit-expense/:id"
+        element={<Navigate to="/add-transaction" replace />}
+      />
+      <Route
+        path="/profile"
         element={
           <ProtectedRoute>
-            <AddExpense />
+            <Profile />
           </ProtectedRoute>
         }
       />

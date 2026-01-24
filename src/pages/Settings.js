@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings2, Check, Loader2, AlertCircle } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -29,23 +30,26 @@ const currencies = [
 export default function Settings() {
   const navigate = useNavigate();
   const { token, user, updateUser } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | saved | error
   const [settings, setSettings] = useState({
     currency: user?.currency || "USD",
     dark_mode: user?.dark_mode ?? true,
     budget: user?.budget?.toString() || "",
     ai_insights_enabled: user?.ai_insights_enabled ?? true,
   });
+  const prevSettingsRef = useRef(settings);
+  const debouncedSettings = useDebounce(settings, 800);
 
-  const handleSave = async () => {
-    setIsLoading(true);
+  // Auto-save when debounced settings change
+  const saveSettings = useCallback(async (newSettings) => {
+    setSaveStatus("saving");
 
     try {
       const payload = {
-        currency: settings.currency,
-        dark_mode: settings.dark_mode,
-        budget: settings.budget ? parseFloat(settings.budget) : null,
-        ai_insights_enabled: settings.ai_insights_enabled,
+        currency: newSettings.currency,
+        dark_mode: newSettings.dark_mode,
+        budget: newSettings.budget ? parseFloat(newSettings.budget) : null,
+        ai_insights_enabled: newSettings.ai_insights_enabled,
       };
 
       const response = await axios.put(`${API}/user/settings`, payload, {
@@ -53,14 +57,34 @@ export default function Settings() {
       });
 
       updateUser(response.data);
-      toast.success("Settings saved successfully!");
-    } catch (error) {
-      toast.error("Failed to save settings");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setSaveStatus("saved");
 
+      // Reset to idle after showing saved
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch (error) {
+      setSaveStatus("error");
+      toast.error("Failed to save settings");
+
+      // Rollback to previous settings
+      setSettings(prevSettingsRef.current);
+
+      // Reset to idle after showing error
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    }
+  }, [token, updateUser]);
+
+  // Trigger save when debounced settings change (skip initial render)
+  useEffect(() => {
+    const prevStr = JSON.stringify(prevSettingsRef.current);
+    const newStr = JSON.stringify(debouncedSettings);
+
+    if (prevStr !== newStr) {
+      prevSettingsRef.current = debouncedSettings;
+      saveSettings(debouncedSettings);
+    }
+  }, [debouncedSettings, saveSettings]);
+
+  // Apply dark mode immediately
   useEffect(() => {
     if (settings.dark_mode) {
       document.documentElement.classList.add('dark');
@@ -69,22 +93,58 @@ export default function Settings() {
     }
   }, [settings.dark_mode]);
 
+  const renderSaveIndicator = () => {
+    switch (saveStatus) {
+      case "saving":
+        return (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Saving...
+          </div>
+        );
+      case "saved":
+        return (
+          <div className="flex items-center gap-2 text-sm text-emerald-500">
+            <Check className="w-4 h-4" />
+            Saved
+          </div>
+        );
+      case "error":
+        return (
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="w-4 h-4" />
+            Failed to save
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")} data-testid="back-button">
+    <div className="min-h-screen bg-background animate-fade-in">
+      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+          <Button variant="ghost" onClick={() => navigate("/dashboard")} data-testid="back-button" className="btn-press">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
+          {renderSaveIndicator()}
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <Card>
+      <div className="max-w-3xl mx-auto px-4 py-8 animate-slide-up">
+        <Card className="border-border/50 shadow-lg shadow-primary/5">
           <CardHeader>
-            <CardTitle>Settings</CardTitle>
-            <CardDescription>Customize your expense tracking experience</CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Settings2 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Settings</CardTitle>
+                <CardDescription>Changes are saved automatically</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -93,7 +153,7 @@ export default function Settings() {
                 value={settings.currency}
                 onValueChange={(value) => setSettings({ ...settings, currency: value })}
               >
-                <SelectTrigger id="currency" data-testid="currency-select">
+                <SelectTrigger id="currency" data-testid="currency-select" className="h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -119,15 +179,16 @@ export default function Settings() {
                 placeholder="Enter your monthly budget"
                 value={settings.budget}
                 onChange={(e) => setSettings({ ...settings, budget: e.target.value })}
+                className="h-11"
               />
               <p className="text-sm text-muted-foreground">
                 Set a monthly budget to track spending and get alerts when exceeded
               </p>
             </div>
 
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/50 border">
               <div className="space-y-1">
-                <Label htmlFor="dark-mode">Dark Mode</Label>
+                <Label htmlFor="dark-mode" className="font-medium">Dark Mode</Label>
                 <p className="text-sm text-muted-foreground">
                   Toggle between dark and light theme
                 </p>
@@ -140,9 +201,9 @@ export default function Settings() {
               />
             </div>
 
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/50 border">
               <div className="space-y-1">
-                <Label htmlFor="ai-insights">AI Insights</Label>
+                <Label htmlFor="ai-insights" className="font-medium">AI Insights</Label>
                 <p className="text-sm text-muted-foreground">
                   Enable AI-powered spending insights and recommendations
                 </p>
@@ -155,12 +216,6 @@ export default function Settings() {
                   setSettings({ ...settings, ai_insights_enabled: checked })
                 }
               />
-            </div>
-
-            <div className="pt-4">
-              <Button onClick={handleSave} disabled={isLoading} data-testid="save-settings-button">
-                {isLoading ? "Saving..." : "Save Settings"}
-              </Button>
             </div>
           </CardContent>
         </Card>
